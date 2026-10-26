@@ -124,6 +124,49 @@ export default function SignalsDashboard() {
         </div>
       )}
 
+      {/* Legend — always visible */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+          <div className="text-slate-400 text-xs font-medium mb-3 uppercase tracking-wide">MACD Legend</div>
+          <div className="space-y-2 text-xs">
+            {[
+              { icon: "⬆", label: "Cross (Bullish)", desc: "MACD just crossed above signal line — momentum turning bullish right now", color: "text-emerald-400" },
+              { icon: "▲", label: "Bull",            desc: "MACD above signal line — ongoing uptrend",                                  color: "text-green-400"   },
+              { icon: "▼", label: "Bear",            desc: "MACD below signal line — ongoing downtrend",                                color: "text-slate-400"   },
+              { icon: "⬇", label: "Cross (Bearish)", desc: "MACD just crossed below signal line — sell signal",                        color: "text-red-400"     },
+            ].map(({ icon, label, desc, color }) => (
+              <div key={label} className="flex gap-3 items-start">
+                <span className={`font-bold w-4 shrink-0 ${color}`}>{icon}</span>
+                <div>
+                  <span className={`font-medium ${color}`}>{label}</span>
+                  <span className="text-slate-500"> — {desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
+          <div className="text-slate-400 text-xs font-medium mb-3 uppercase tracking-wide">RSI Legend</div>
+          <div className="space-y-2 text-xs">
+            {[
+              { range: "< 30",  label: "Oversold",   desc: "Strong buy zone — price may bounce",      color: "text-emerald-400" },
+              { range: "30–45", label: "Low",         desc: "Watch for buy signals with confirmation", color: "text-green-400"   },
+              { range: "45–60", label: "Neutral",     desc: "No clear directional edge",               color: "text-slate-400"   },
+              { range: "60–70", label: "High",        desc: "Momentum strong, watch for reversal",     color: "text-amber-400"   },
+              { range: "> 70",  label: "Overbought",  desc: "Sell zone — price may pull back",         color: "text-red-400"     },
+            ].map(({ range, label, desc, color }) => (
+              <div key={range} className="flex gap-3 items-start">
+                <span className={`font-mono font-medium w-12 shrink-0 ${color}`}>{range}</span>
+                <div>
+                  <span className={`font-medium ${color}`}>{label}</span>
+                  <span className="text-slate-500"> — {desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {rows.length > 0 && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
