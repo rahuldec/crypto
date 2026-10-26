@@ -87,35 +87,35 @@ export type BBResult = {
   lower: number;
   percentB: number;  // 0 = at lower band, 1 = at upper band; <0 or >1 = outside bands
   bandwidth: number; // (upper - lower) / middle — relative band width
-  squeeze: boolean;  // bandwidth near its minimum over the window (volatility coiling)
+  squeeze: boolean;  // bandwidth near its minimum over the full window
 };
 
 export function calcBollingerBands(closes: number[], period = 20, multiplier = 2): BBResult | null {
   if (closes.length < period) return null;
 
-  // compute bandwidth at every point to detect squeeze
+  // single pass: collect bandwidths and keep the final upper/middle/lower
   const bandwidths: number[] = [];
+  let lastUpper = 0, lastMiddle = 0, lastLower = 0;
+
   for (let i = period - 1; i < closes.length; i++) {
     const slice = closes.slice(i - period + 1, i + 1);
     const mean = slice.reduce((a, b) => a + b, 0) / period;
     const std = Math.sqrt(slice.reduce((a, b) => a + (b - mean) ** 2, 0) / period);
-    bandwidths.push((mean + multiplier * std - (mean - multiplier * std)) / mean);
+    lastUpper  = mean + multiplier * std;
+    lastLower  = mean - multiplier * std;
+    lastMiddle = mean;
+    bandwidths.push((lastUpper - lastLower) / mean);
   }
 
   const currentBW = bandwidths[bandwidths.length - 1];
   const minBW = Math.min(...bandwidths);
-  // squeeze = current bandwidth within 10% of its historical minimum in the window
+  // squeeze: current bandwidth within 10% of its window minimum
   const squeeze = currentBW <= minBW * 1.1;
 
-  const slice = closes.slice(-period);
-  const middle = slice.reduce((a, b) => a + b, 0) / period;
-  const std = Math.sqrt(slice.reduce((a, b) => a + (b - middle) ** 2, 0) / period);
-  const upper = middle + multiplier * std;
-  const lower = middle - multiplier * std;
   const price = closes[closes.length - 1];
-  const percentB = upper === lower ? 0.5 : (price - lower) / (upper - lower);
+  const percentB = lastUpper === lastLower ? 0.5 : (price - lastLower) / (lastUpper - lastLower);
 
-  return { upper, middle, lower, percentB, bandwidth: currentBW, squeeze };
+  return { upper: lastUpper, middle: lastMiddle, lower: lastLower, percentB, bandwidth: currentBW, squeeze };
 }
 
 export type SignalType = "strong_buy" | "buy" | "watch_buy" | "neutral" | "watch_sell" | "sell" | "strong_sell";
@@ -128,41 +128,46 @@ export function getSignal(
 ): SignalType {
   const macdBull = macd?.crossover === "bullish" || (macd && macd.histogram > 0);
   const macdBear = macd?.crossover === "bearish" || (macd && macd.histogram < 0);
-  const bbOversold   = bb && bb.percentB < 0.2;  // price near or below lower band
-  const bbOverbought = bb && bb.percentB > 0.8;  // price near or above upper band
+  const bbOversold   = bb && bb.percentB < 0.2;
+  const bbOverbought = bb && bb.percentB > 0.8;
 
-  // Strong buy: classic oversold + volume + MACD
+  // Strong buy
   if (rsi < 30 && volRatio >= 1.5 && macdBull) return "strong_buy";
   if (rsi < 30 && volRatio >= 1.5) return "strong_buy";
-  // BB below lower band + oversold RSI = high-conviction mean reversion setup
-  if (rsi < 35 && bb && bb.percentB < 0) return "strong_buy";
-  // Buy: oversold + volume, or bullish crossover + low RSI, or BB lower band + MACD confirming
+  if (rsi < 35 && bb && bb.percentB < 0) return "strong_buy";   // price below lower band + oversold RSI
+
+  // Buy
   if (rsi < 35 && volRatio >= 1.2) return "buy";
   if (rsi < 40 && macd?.crossover === "bullish" && volRatio >= 1.1) return "buy";
-  if (bbOversold && macdBull && rsi < 50) return "buy";
+  if (bbOversold && macdBull && rsi < 45) return "buy";          // near lower band + MACD + RSI confirming
+
   // Watch buy
   if (rsi < 40 || (macd?.crossover === "bullish" && rsi < 55)) return "watch_buy";
-  if (bbOversold && rsi < 55) return "watch_buy";
+  if (bbOversold && rsi < 45) return "watch_buy";                // RSI must be in lower zone too
 
-  // Strong sell: overbought + volume + MACD
+  // Strong sell
   if (rsi > 75 && volRatio >= 1.5 && macdBear) return "strong_sell";
   if (rsi > 75 && volRatio >= 1.5) return "strong_sell";
-  // BB above upper band + overbought RSI = high-conviction mean reversion sell
-  if (rsi > 65 && bb && bb.percentB > 1) return "strong_sell";
+  if (rsi > 65 && bb && bb.percentB > 1) return "strong_sell";  // price above upper band + overbought RSI
+
+  // Sell
   if (rsi > 70 && volRatio >= 1.2) return "sell";
   if (rsi > 65 && macd?.crossover === "bearish") return "sell";
-  if (bbOverbought && macdBear && rsi > 50) return "sell";
+  if (bbOverbought && macdBear && rsi > 55) return "sell";       // near upper band + MACD + RSI confirming
+
+  // Watch sell
   if (rsi > 60 || macd?.crossover === "bearish") return "watch_sell";
-  if (bbOverbought && rsi > 45) return "watch_sell";
+  if (bbOverbought && rsi > 55) return "watch_sell";             // RSI must be in upper zone too
 
   return "neutral";
 }
 
+// symmetric scale with no gap: strong_buy=3 … neutral=0 … strong_sell=-3
 export function signalScore(signal: SignalType): number {
   const scores: Record<SignalType, number> = {
-    strong_buy:   6,
-    buy:          5,
-    watch_buy:    4,
+    strong_buy:   3,
+    buy:          2,
+    watch_buy:    1,
     neutral:      0,
     watch_sell:  -1,
     sell:        -2,

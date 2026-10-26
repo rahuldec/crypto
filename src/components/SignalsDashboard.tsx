@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Ticker, Kline } from "@/lib/wazirx";
 import { calcRSI, calcVolumeRatio, calcMACD, calcBollingerBands, getSignal, signalScore, SignalType, MACDResult, BBResult } from "@/lib/indicators";
 
@@ -27,7 +27,7 @@ const SIGNAL_META: Record<SignalType, { label: string; color: string; bg: string
   strong_sell: { label: "Strong Sell", color: "text-red-700",     bg: "bg-red-50 border-red-200",         icon: "▼▼" },
 };
 
-const WATCHLIST = ["btc", "eth", "bnb", "usdt", "doge"];
+const WATCHLIST = ["btc", "eth", "bnb", "doge"]; // usdt is a stablecoin — never generates a signal
 
 export default function SignalsDashboard() {
   const [rows, setRows] = useState<SignalRow[]>([]);
@@ -37,8 +37,11 @@ export default function SignalsDashboard() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<"all" | "buy" | "sell">("all");
   const [lastRun, setLastRun] = useState<Date | null>(null);
+  const scanningRef = useRef(false);
 
-  const runAnalysis = useCallback(async () => {
+  const runAnalysis = useCallback(async (force = false) => {
+    if (scanningRef.current && !force) return; // block StrictMode double-invoke
+    scanningRef.current = true;
     setLoading(true);
     setRows([]);
     setProgress(0);
@@ -61,9 +64,12 @@ export default function SignalsDashboard() {
         if (i > 0) await new Promise((r) => setTimeout(r, 1100));
 
         try {
-          const kr = await fetch(`/api/klines?symbol=${t.symbol}&interval=1d&limit=40`);
+          // 120 candles → drop last (today's incomplete candle) → 119 complete daily closes
+          // gives BB(20) ~100 squeeze data points vs 21 with 40 candles
+          const kr = await fetch(`/api/klines?symbol=${t.symbol}&interval=1d&limit=120`);
           if (!kr.ok) { setProgress(i + 1); continue; }
-          const klines: Kline[] = await kr.json();
+          const rawKlines: Kline[] = await kr.json();
+          const klines = rawKlines.slice(0, -1); // drop current incomplete candle
           if (klines.length < 35) { setProgress(i + 1); continue; }
 
           const closes = klines.map((k) => k[4]);
@@ -98,9 +104,10 @@ export default function SignalsDashboard() {
       setError(String(e));
     }
     setLoading(false);
+    scanningRef.current = false;
   }, []);
 
-  useEffect(() => { runAnalysis(); }, [runAnalysis]);
+  useEffect(() => { runAnalysis(); }, [runAnalysis]); // scanningRef guards against StrictMode double-invoke
 
   const filtered = rows.filter((r) => {
     if (filter === "buy")  return ["strong_buy", "buy", "watch_buy"].includes(r.signal);
@@ -125,7 +132,7 @@ export default function SignalsDashboard() {
           <div className="w-full bg-slate-100 rounded-full h-2">
             <div className="bg-blue-500 h-2 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-xs text-slate-400 mt-2">Fetching 40-day klines · RSI(14) + MACD(12,26,9) + BB(20,2) + Volume ratio · ~30s</p>
+          <p className="text-xs text-slate-400 mt-2">Fetching 120-day klines · RSI(14) + MACD(12,26,9) + BB(20,2) + Volume ratio · ~10s</p>
         </div>
       )}
 
@@ -228,7 +235,7 @@ export default function SignalsDashboard() {
                 {f === "all" ? "All signals" : f === "buy" ? "Buy only" : "Sell only"}
               </button>
             ))}
-            <button onClick={runAnalysis} disabled={loading}
+            <button onClick={() => runAnalysis(true)} disabled={loading}
               className="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:text-slate-800 disabled:opacity-40 transition-colors">
               {loading ? "Scanning…" : "↺ Re-scan"}
             </button>
