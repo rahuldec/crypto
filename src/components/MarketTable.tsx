@@ -69,7 +69,7 @@ export default function MarketTable() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+      <div className="flex items-center justify-center h-48 text-slate-500 text-sm">
         Loading market data...
       </div>
     );
@@ -79,7 +79,7 @@ export default function MarketTable() {
     <div>
       <div className="flex gap-3 mb-4 items-center flex-wrap">
         <input
-          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 w-48"
+          className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 w-48 shadow-sm"
           placeholder="Search coin..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -90,20 +90,20 @@ export default function MarketTable() {
               key={s}
               onClick={() => setSort(s)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                sort === s ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-slate-200"
+                sort === s ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:text-slate-800"
               }`}
             >
               {s === "pct" ? "% Change" : s === "vol" ? "Volume" : "Price"}
             </button>
           ))}
         </div>
-        <span className="ml-auto text-xs text-slate-500">Auto-refreshes every 15s</span>
+        <span className="ml-auto text-xs text-slate-400">Auto-refreshes every 15s</span>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-slate-500 text-xs border-b border-slate-800">
+            <tr className="text-slate-500 text-xs border-b border-slate-200">
               <th className="text-left py-2 pr-4 font-medium">Coin</th>
               <th className="text-right py-2 px-4 font-medium">Last Price</th>
               <th className="text-right py-2 px-4 font-medium">24h Change</th>
@@ -118,34 +118,34 @@ export default function MarketTable() {
               const pct = pctChange(t.openPrice, t.lastPrice);
               const pos = pct >= 0;
               return (
-                <tr key={t.symbol} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                <tr key={t.symbol} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
+                      <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
                         {t.baseAsset.slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium text-slate-200">{t.baseAsset.toUpperCase()}</div>
-                        <div className="text-xs text-slate-500">{t.symbol.toUpperCase()}</div>
+                        <div className="font-medium text-slate-800">{t.baseAsset.toUpperCase()}</div>
+                        <div className="text-xs text-slate-400">{t.symbol.toUpperCase()}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-200">
+                  <td className="py-3 px-4 text-right font-mono text-slate-800">
                     ₹{fmt(t.lastPrice)}
                   </td>
-                  <td className={`py-3 px-4 text-right font-medium ${pos ? "text-green-400" : "text-red-400"}`}>
+                  <td className={`py-3 px-4 text-right font-medium ${pos ? "text-green-600" : "text-red-500"}`}>
                     {pos ? "+" : ""}{pct.toFixed(2)}%
                   </td>
-                  <td className="py-3 px-4 text-right text-slate-400 font-mono">₹{fmt(t.highPrice)}</td>
-                  <td className="py-3 px-4 text-right text-slate-400 font-mono">₹{fmt(t.lowPrice)}</td>
-                  <td className="py-3 px-4 text-right text-slate-400">
+                  <td className="py-3 px-4 text-right text-slate-500 font-mono">₹{fmt(t.highPrice)}</td>
+                  <td className="py-3 px-4 text-right text-slate-500 font-mono">₹{fmt(t.lowPrice)}</td>
+                  <td className="py-3 px-4 text-right text-slate-500">
                     {parseFloat(t.volume).toLocaleString("en-IN", { maximumFractionDigits: 0 })}
                   </td>
                   <td className="py-3 pl-4 w-28">
                     {sparklines[t.symbol] ? (
                       <SparklineChart data={sparklines[t.symbol]} positive={pos} />
                     ) : (
-                      <div className="h-10 bg-slate-800/50 rounded animate-pulse" />
+                      <div className="h-10 bg-slate-100 rounded animate-pulse" />
                     )}
                   </td>
                 </tr>

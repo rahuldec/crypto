@@ -96,7 +96,7 @@ export default function PortfolioDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
+      <div className="flex items-center justify-center h-48 text-slate-500 text-sm">
         Loading portfolio...
       </div>
     );
@@ -104,7 +104,7 @@ export default function PortfolioDashboard() {
 
   if (error) {
     return (
-      <div className="rounded-xl bg-red-900/30 border border-red-700/50 p-4 text-red-300 text-sm">
+      <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-600 text-sm">
         {error}
       </div>
     );
@@ -117,26 +117,26 @@ export default function PortfolioDashboard() {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5">
-          <div className="text-slate-400 text-xs mb-1">Total Portfolio Value</div>
-          <div className="text-2xl font-bold text-white">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="text-slate-500 text-xs mb-1">Total Portfolio Value</div>
+          <div className="text-2xl font-bold text-slate-900">
             ₹{totalInr.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
           </div>
           {lastUpdated && (
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-slate-400 mt-1">
               Updated {lastUpdated.toLocaleTimeString()}
             </div>
           )}
         </div>
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5">
-          <div className="text-slate-400 text-xs mb-1">Assets Held</div>
-          <div className="text-2xl font-bold text-white">{holdings.length}</div>
-          <div className="text-xs text-slate-500 mt-1">across all coins</div>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="text-slate-500 text-xs mb-1">Assets Held</div>
+          <div className="text-2xl font-bold text-slate-900">{holdings.length}</div>
+          <div className="text-xs text-slate-400 mt-1">across all coins</div>
         </div>
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5">
-          <div className="text-slate-400 text-xs mb-1">Top 5 Concentration</div>
-          <div className="text-2xl font-bold text-white">{(topPct * 100).toFixed(1)}%</div>
-          <div className="text-xs text-slate-500 mt-1">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="text-slate-500 text-xs mb-1">Top 5 Concentration</div>
+          <div className="text-2xl font-bold text-slate-900">{(topPct * 100).toFixed(1)}%</div>
+          <div className="text-xs text-slate-400 mt-1">
             {topHoldings.map((h) => h.asset).join(", ")}
           </div>
         </div>
@@ -145,7 +145,7 @@ export default function PortfolioDashboard() {
       {/* Allocation bar */}
       {holdings.length > 0 && (
         <div>
-          <div className="text-xs text-slate-400 mb-2">Allocation</div>
+          <div className="text-xs text-slate-500 mb-2">Allocation</div>
           <div className="flex h-3 rounded-full overflow-hidden gap-px">
             {holdings.slice(0, 8).map((h, i) => {
               const colors = [
@@ -164,7 +164,7 @@ export default function PortfolioDashboard() {
             })}
             {holdings.length > 8 && (
               <div
-                className="bg-slate-600 flex-1"
+                className="bg-slate-300 flex-1"
                 title="Others"
               />
             )}
@@ -177,7 +177,7 @@ export default function PortfolioDashboard() {
               ];
               const pct = totalInr > 0 ? (h.valueInr / totalInr) * 100 : 0;
               return (
-                <div key={h.asset} className="flex items-center gap-1 text-xs text-slate-400">
+                <div key={h.asset} className="flex items-center gap-1 text-xs text-slate-500">
                   <div className={`w-2 h-2 rounded-full ${colors[i]}`} />
                   {h.asset} {pct.toFixed(1)}%
                 </div>
@@ -191,7 +191,7 @@ export default function PortfolioDashboard() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-slate-500 text-xs border-b border-slate-800">
+            <tr className="text-slate-500 text-xs border-b border-slate-200">
               <th className="text-left py-2 pr-4 font-medium">Asset</th>
               <th className="text-right py-2 px-4 font-medium">Qty</th>
               <th className="text-right py-2 px-4 font-medium">Price (INR)</th>
@@ -205,39 +205,39 @@ export default function PortfolioDashboard() {
               const share = totalInr > 0 ? (h.valueInr / totalInr) * 100 : 0;
               const pos = h.pct24h >= 0;
               return (
-                <tr key={h.asset} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
+                <tr key={h.asset} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
+                      <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
                         {h.asset.slice(0, 2).toUpperCase()}
                       </div>
-                      <div className="font-medium text-slate-200">{h.asset}</div>
+                      <div className="font-medium text-slate-800">{h.asset}</div>
                     </div>
                   </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-300">
+                  <td className="py-3 px-4 text-right font-mono text-slate-700">
                     {h.total.toLocaleString("en-IN", { maximumFractionDigits: 8 })}
                     {h.locked > 0 && (
-                      <span className="text-xs text-slate-500 ml-1">({h.locked.toFixed(4)} locked)</span>
+                      <span className="text-xs text-slate-400 ml-1">({h.locked.toFixed(4)} locked)</span>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-right font-mono text-slate-300">
+                  <td className="py-3 px-4 text-right font-mono text-slate-700">
                     {h.priceInr > 0 ? `₹${h.priceInr.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}
                   </td>
-                  <td className="py-3 px-4 text-right font-mono font-medium text-slate-200">
+                  <td className="py-3 px-4 text-right font-mono font-medium text-slate-800">
                     ₹{h.valueInr.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
                   </td>
-                  <td className={`py-3 px-4 text-right font-medium text-sm ${pos ? "text-green-400" : h.pct24h === 0 ? "text-slate-500" : "text-red-400"}`}>
+                  <td className={`py-3 px-4 text-right font-medium text-sm ${pos ? "text-green-600" : h.pct24h === 0 ? "text-slate-400" : "text-red-500"}`}>
                     {h.pct24h === 0 ? "—" : `${pos ? "+" : ""}${h.pct24h.toFixed(2)}%`}
                   </td>
                   <td className="py-3 pl-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <div className="w-16 bg-slate-800 rounded-full h-1.5">
+                      <div className="w-16 bg-slate-100 rounded-full h-1.5">
                         <div
                           className="bg-blue-500 h-1.5 rounded-full"
                           style={{ width: `${Math.min(share, 100)}%` }}
                         />
                       </div>
-                      <span className="text-slate-400 text-xs w-10 text-right">{share.toFixed(1)}%</span>
+                      <span className="text-slate-500 text-xs w-10 text-right">{share.toFixed(1)}%</span>
                     </div>
                   </td>
                 </tr>

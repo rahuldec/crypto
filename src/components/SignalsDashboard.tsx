@@ -17,16 +17,16 @@ type SignalRow = {
 };
 
 const SIGNAL_META: Record<SignalType, { label: string; color: string; bg: string; icon: string }> = {
-  strong_buy:  { label: "Strong Buy",  color: "text-emerald-400", bg: "bg-emerald-400/10 border-emerald-400/30", icon: "▲▲" },
-  buy:         { label: "Buy",         color: "text-green-400",   bg: "bg-green-400/10 border-green-400/30",     icon: "▲"  },
-  watch_buy:   { label: "Watch",       color: "text-lime-400",    bg: "bg-lime-400/10 border-lime-400/30",       icon: "◈"  },
-  neutral:     { label: "Neutral",     color: "text-slate-400",   bg: "bg-slate-700/30 border-slate-600/30",     icon: "—"  },
-  watch_sell:  { label: "Caution",     color: "text-amber-400",   bg: "bg-amber-400/10 border-amber-400/30",     icon: "◇"  },
-  sell:        { label: "Sell",        color: "text-orange-400",  bg: "bg-orange-400/10 border-orange-400/30",   icon: "▼"  },
-  strong_sell: { label: "Strong Sell", color: "text-red-400",     bg: "bg-red-400/10 border-red-400/30",         icon: "▼▼" },
+  strong_buy:  { label: "Strong Buy",  color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", icon: "▲▲" },
+  buy:         { label: "Buy",         color: "text-green-700",   bg: "bg-green-50 border-green-200",     icon: "▲"  },
+  watch_buy:   { label: "Watch",       color: "text-lime-700",    bg: "bg-lime-50 border-lime-200",       icon: "◈"  },
+  neutral:     { label: "Neutral",     color: "text-slate-500",   bg: "bg-slate-100 border-slate-300",    icon: "—"  },
+  watch_sell:  { label: "Caution",     color: "text-amber-700",   bg: "bg-amber-50 border-amber-200",     icon: "◇"  },
+  sell:        { label: "Sell",        color: "text-orange-700",  bg: "bg-orange-50 border-orange-200",   icon: "▼"  },
+  strong_sell: { label: "Strong Sell", color: "text-red-700",     bg: "bg-red-50 border-red-200",         icon: "▼▼" },
 };
 
-const TOP_N = 25;
+const WATCHLIST = ["btc", "eth", "bnb", "usdt", "doge"];
 
 export default function SignalsDashboard() {
   const [rows, setRows] = useState<SignalRow[]>([]);
@@ -49,9 +49,8 @@ export default function SignalsDashboard() {
       const tickers: Ticker[] = await res.json();
 
       const inrPairs = tickers
-        .filter((t) => t.quoteAsset === "inr" && parseFloat(t.volume) > 0)
-        .sort((a, b) => parseFloat(b.volume) * parseFloat(b.lastPrice) - parseFloat(a.volume) * parseFloat(a.lastPrice))
-        .slice(0, TOP_N);
+        .filter((t) => t.quoteAsset === "inr" && WATCHLIST.includes(t.baseAsset.toLowerCase()))
+        .sort((a, b) => WATCHLIST.indexOf(a.baseAsset.toLowerCase()) - WATCHLIST.indexOf(b.baseAsset.toLowerCase()));
 
       setTotal(inrPairs.length);
       const results: SignalRow[] = [];
@@ -106,60 +105,60 @@ export default function SignalsDashboard() {
   const pct = total > 0 ? Math.round((progress / total) * 100) : 0;
 
   if (error) return (
-    <div className="rounded-xl bg-red-900/30 border border-red-700/50 p-4 text-red-300 text-sm">{error}</div>
+    <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-600 text-sm">{error}</div>
   );
 
   return (
     <div className="space-y-6">
       {loading && (
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-2xl p-5">
-          <div className="flex justify-between text-sm text-slate-400 mb-3">
-            <span>Analyzing top {total} coins by volume…</span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <div className="flex justify-between text-sm text-slate-500 mb-3">
+            <span>Analyzing {total} coins…</span>
             <span>{progress}/{total}</span>
           </div>
-          <div className="w-full bg-slate-700 rounded-full h-2">
+          <div className="w-full bg-slate-100 rounded-full h-2">
             <div className="bg-blue-500 h-2 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-xs text-slate-500 mt-2">Fetching 40-day klines · Computing RSI(14) + MACD(12,26,9) + Volume ratio · ~30s</p>
+          <p className="text-xs text-slate-400 mt-2">Fetching 40-day klines · Computing RSI(14) + MACD(12,26,9) + Volume ratio · ~30s</p>
         </div>
       )}
 
       {/* Legend — always visible */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <div className="text-slate-400 text-xs font-medium mb-3 uppercase tracking-wide">MACD Legend</div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-slate-500 text-xs font-medium mb-3 uppercase tracking-wide">MACD Legend</div>
           <div className="space-y-2 text-xs">
             {[
-              { icon: "⬆", label: "Cross (Bullish)", desc: "MACD just crossed above signal line — momentum turning bullish right now", color: "text-emerald-400" },
-              { icon: "▲", label: "Bull",            desc: "MACD above signal line — ongoing uptrend",                                  color: "text-green-400"   },
-              { icon: "▼", label: "Bear",            desc: "MACD below signal line — ongoing downtrend",                                color: "text-slate-400"   },
-              { icon: "⬇", label: "Cross (Bearish)", desc: "MACD just crossed below signal line — sell signal",                        color: "text-red-400"     },
+              { icon: "⬆", label: "Cross (Bullish)", desc: "MACD just crossed above signal line — momentum turning bullish right now", color: "text-emerald-600" },
+              { icon: "▲", label: "Bull",            desc: "MACD above signal line — ongoing uptrend",                                  color: "text-green-600"   },
+              { icon: "▼", label: "Bear",            desc: "MACD below signal line — ongoing downtrend",                                color: "text-slate-500"   },
+              { icon: "⬇", label: "Cross (Bearish)", desc: "MACD just crossed below signal line — sell signal",                        color: "text-red-500"     },
             ].map(({ icon, label, desc, color }) => (
               <div key={label} className="flex gap-3 items-start">
                 <span className={`font-bold w-4 shrink-0 ${color}`}>{icon}</span>
                 <div>
                   <span className={`font-medium ${color}`}>{label}</span>
-                  <span className="text-slate-500"> — {desc}</span>
+                  <span className="text-slate-400"> — {desc}</span>
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div className="bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-          <div className="text-slate-400 text-xs font-medium mb-3 uppercase tracking-wide">RSI Legend</div>
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-slate-500 text-xs font-medium mb-3 uppercase tracking-wide">RSI Legend</div>
           <div className="space-y-2 text-xs">
             {[
-              { range: "< 30",  label: "Oversold",   desc: "Strong buy zone — price may bounce",      color: "text-emerald-400" },
-              { range: "30–45", label: "Low",         desc: "Watch for buy signals with confirmation", color: "text-green-400"   },
-              { range: "45–60", label: "Neutral",     desc: "No clear directional edge",               color: "text-slate-400"   },
-              { range: "60–70", label: "High",        desc: "Momentum strong, watch for reversal",     color: "text-amber-400"   },
-              { range: "> 70",  label: "Overbought",  desc: "Sell zone — price may pull back",         color: "text-red-400"     },
+              { range: "< 30",  label: "Oversold",   desc: "Strong buy zone — price may bounce",      color: "text-emerald-600" },
+              { range: "30–45", label: "Low",         desc: "Watch for buy signals with confirmation", color: "text-green-600"   },
+              { range: "45–60", label: "Neutral",     desc: "No clear directional edge",               color: "text-slate-500"   },
+              { range: "60–70", label: "High",        desc: "Momentum strong, watch for reversal",     color: "text-amber-600"   },
+              { range: "> 70",  label: "Overbought",  desc: "Sell zone — price may pull back",         color: "text-red-500"     },
             ].map(({ range, label, desc, color }) => (
               <div key={range} className="flex gap-3 items-start">
                 <span className={`font-mono font-medium w-12 shrink-0 ${color}`}>{range}</span>
                 <div>
                   <span className={`font-medium ${color}`}>{label}</span>
-                  <span className="text-slate-500"> — {desc}</span>
+                  <span className="text-slate-400"> — {desc}</span>
                 </div>
               </div>
             ))}
@@ -178,36 +177,36 @@ export default function SignalsDashboard() {
             ].map(({ label, sig, color }) => {
               const count = rows.filter(r => sig.split(",").includes(r.signal)).length;
               return (
-                <div key={label} className={`bg-${color}-400/10 border border-${color}-400/30 rounded-xl p-4`}>
-                  <div className={`text-${color}-400 text-xs mb-1`}>{label}</div>
-                  <div className="text-2xl font-bold text-white">{count}</div>
+                <div key={label} className={`bg-${color}-50 border border-${color}-200 rounded-xl p-4`}>
+                  <div className={`text-${color}-600 text-xs mb-1`}>{label}</div>
+                  <div className="text-2xl font-bold text-slate-900">{count}</div>
                 </div>
               );
             })}
           </div>
 
-          <div className="bg-amber-900/20 border border-amber-700/30 rounded-xl p-3 text-xs text-amber-300/80">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
             ⚠️ RSI(14) + MACD(12,26,9) + Volume ratio are technical indicators only — not financial advice. Always do your own research.
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
             {(["all", "buy", "sell"] as const).map((f) => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${filter === f ? "bg-blue-600 text-white" : "bg-slate-800 text-slate-400 hover:text-slate-200"}`}>
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${filter === f ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:text-slate-800"}`}>
                 {f === "all" ? "All signals" : f === "buy" ? "Buy only" : "Sell only"}
               </button>
             ))}
             <button onClick={runAnalysis} disabled={loading}
-              className="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-400 hover:text-slate-200 disabled:opacity-40 transition-colors">
+              className="ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-600 hover:text-slate-800 disabled:opacity-40 transition-colors">
               {loading ? "Scanning…" : "↺ Re-scan"}
             </button>
-            {lastRun && !loading && <span className="text-xs text-slate-500">Last scan: {lastRun.toLocaleTimeString()}</span>}
+            {lastRun && !loading && <span className="text-xs text-slate-400">Last scan: {lastRun.toLocaleTimeString()}</span>}
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-slate-500 text-xs border-b border-slate-800">
+                <tr className="text-slate-500 text-xs border-b border-slate-200">
                   <th className="text-left py-2 pr-3 font-medium">#</th>
                   <th className="text-left py-2 pr-4 font-medium">Coin</th>
                   <th className="text-left py-2 px-3 font-medium">Signal</th>
@@ -222,10 +221,10 @@ export default function SignalsDashboard() {
                 {filtered.map((r, i) => {
                   const meta = SIGNAL_META[r.signal];
                   const pos = r.pct24h >= 0;
-                  const macdColor = r.macd?.crossover === "bullish" ? "text-emerald-400"
-                    : r.macd?.crossover === "bearish" ? "text-red-400"
-                    : r.macd && r.macd.histogram > 0 ? "text-green-400"
-                    : "text-slate-500";
+                  const macdColor = r.macd?.crossover === "bullish" ? "text-emerald-600"
+                    : r.macd?.crossover === "bearish" ? "text-red-500"
+                    : r.macd && r.macd.histogram > 0 ? "text-green-600"
+                    : "text-slate-400";
                   const macdLabel = r.macd?.crossover === "bullish" ? "⬆ Cross"
                     : r.macd?.crossover === "bearish" ? "⬇ Cross"
                     : r.macd && r.macd.histogram > 0 ? "▲ Bull"
@@ -233,16 +232,16 @@ export default function SignalsDashboard() {
                     : "—";
 
                   return (
-                    <tr key={r.symbol} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 pr-3 text-slate-600 text-xs">{i + 1}</td>
+                    <tr key={r.symbol} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                      <td className="py-3 pr-3 text-slate-400 text-xs">{i + 1}</td>
                       <td className="py-3 pr-4">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-slate-300">
+                          <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
                             {r.baseAsset.slice(0, 2).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-medium text-slate-200">{r.baseAsset.toUpperCase()}</div>
-                            <div className="text-xs text-slate-500">{r.symbol.toUpperCase()}</div>
+                            <div className="font-medium text-slate-800">{r.baseAsset.toUpperCase()}</div>
+                            <div className="text-xs text-slate-400">{r.symbol.toUpperCase()}</div>
                           </div>
                         </div>
                       </td>
@@ -253,11 +252,11 @@ export default function SignalsDashboard() {
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="w-16 bg-slate-800 rounded-full h-1.5">
+                          <div className="w-16 bg-slate-100 rounded-full h-1.5">
                             <div className={`h-1.5 rounded-full ${r.rsi < 30 ? "bg-emerald-500" : r.rsi > 70 ? "bg-red-500" : "bg-blue-500"}`}
                               style={{ width: `${Math.min(r.rsi, 100)}%` }} />
                           </div>
-                          <span className={`font-mono text-sm w-9 text-right ${r.rsi < 30 ? "text-emerald-400" : r.rsi > 70 ? "text-red-400" : "text-slate-300"}`}>
+                          <span className={`font-mono text-sm w-9 text-right ${r.rsi < 30 ? "text-emerald-600" : r.rsi > 70 ? "text-red-500" : "text-slate-700"}`}>
                             {r.rsi}
                           </span>
                         </div>
@@ -265,23 +264,23 @@ export default function SignalsDashboard() {
                       <td className={`py-3 px-3 text-center text-xs font-medium ${macdColor}`}>
                         <div>{macdLabel}</div>
                         {r.macd && (
-                          <div className="text-[10px] text-slate-500 font-mono">
+                          <div className="text-[10px] text-slate-400 font-mono">
                             {r.macd.histogram > 0 ? "+" : ""}{r.macd.histogram.toFixed(4)}
                           </div>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right">
-                        <span className={`font-mono text-sm ${r.volRatio >= 1.5 ? "text-amber-400" : r.volRatio >= 1.2 ? "text-slate-300" : "text-slate-500"}`}>
+                        <span className={`font-mono text-sm ${r.volRatio >= 1.5 ? "text-amber-600" : r.volRatio >= 1.2 ? "text-slate-700" : "text-slate-400"}`}>
                           {r.volRatio}×
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-300 text-sm">
+                      <td className="py-3 px-3 text-right font-mono text-slate-700 text-sm">
                         ₹{r.lastPrice >= 1000
                           ? r.lastPrice.toLocaleString("en-IN", { maximumFractionDigits: 0 })
                           : r.lastPrice < 1 ? r.lastPrice.toFixed(6)
                           : r.lastPrice.toFixed(2)}
                       </td>
-                      <td className={`py-3 pl-3 text-right font-medium text-sm ${pos ? "text-green-400" : "text-red-400"}`}>
+                      <td className={`py-3 pl-3 text-right font-medium text-sm ${pos ? "text-green-600" : "text-red-500"}`}>
                         {pos ? "+" : ""}{r.pct24h.toFixed(2)}%
                       </td>
                     </tr>
@@ -294,7 +293,7 @@ export default function SignalsDashboard() {
       )}
 
       {!loading && rows.length === 0 && !error && (
-        <div className="text-center text-slate-500 text-sm py-12">No signal data yet.</div>
+        <div className="text-center text-slate-400 text-sm py-12">No signal data yet.</div>
       )}
     </div>
   );
