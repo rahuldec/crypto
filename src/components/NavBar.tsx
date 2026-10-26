@@ -16,6 +16,7 @@ export default function NavBar() {
           { href: "/", label: "Portfolio" },
           { href: "/market", label: "Market" },
           { href: "/signals", label: "Signals" },
+          { href: "/backtest", label: "Backtest" },
         ].map(({ href, label }) => (
           <Link
             key={href}
