@@ -29,6 +29,7 @@ export function calcRSI(closes: number[], period = 14): number {
     avgLoss = (avgLoss * (period - 1) + (diff < 0 ? Math.abs(diff) : 0)) / period;
   }
 
+  if (avgLoss === 0 && avgGain === 0) return 50; // flat prices — no directional bias
   if (avgLoss === 0) return 100;
   return 100 - 100 / (1 + avgGain / avgLoss);
 }
@@ -139,7 +140,7 @@ export function getSignal(
   // Buy
   if (rsi < 35 && volRatio >= 1.2) return "buy";
   if (rsi < 40 && macd?.crossover === "bullish" && volRatio >= 1.1) return "buy";
-  if (bbOversold && macdBull && rsi < 45) return "buy";          // near lower band + MACD + RSI confirming
+  if (bbOversold && macd?.crossover === "bullish" && rsi < 45) return "buy"; // fresh crossover only — positive histogram alone can be a seeding artifact
 
   // Watch buy
   if (rsi < 40 || (macd?.crossover === "bullish" && rsi < 55)) return "watch_buy";
@@ -153,7 +154,7 @@ export function getSignal(
   // Sell
   if (rsi > 70 && volRatio >= 1.2) return "sell";
   if (rsi > 65 && macd?.crossover === "bearish") return "sell";
-  if (bbOverbought && macdBear && rsi > 55) return "sell";       // near upper band + MACD + RSI confirming
+  if (bbOverbought && macd?.crossover === "bearish" && rsi > 55) return "sell"; // fresh crossover only
 
   // Watch sell
   if (rsi > 60 || macd?.crossover === "bearish") return "watch_sell";
