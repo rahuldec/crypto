@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Ticker, Kline } from "@/lib/wazirx";
-import { calcRSI, calcVolumeRatio, calcMACD, getSignal, signalScore, SignalType, MACDResult } from "@/lib/indicators";
+import { calcRSI, calcVolumeRatio, calcMACD, calcBollingerBands, getSignal, signalScore, SignalType, MACDResult, BBResult } from "@/lib/indicators";
 
 type SignalRow = {
   symbol: string;
@@ -12,6 +12,7 @@ type SignalRow = {
   rsi: number;
   volRatio: number;
   macd: MACDResult | null;
+  bb: BBResult | null;
   signal: SignalType;
   score: number;
 };
@@ -60,7 +61,6 @@ export default function SignalsDashboard() {
         if (i > 0) await new Promise((r) => setTimeout(r, 1100));
 
         try {
-          // fetch 40 daily candles — enough for MACD(12,26,9) which needs 26+9=35 min
           const kr = await fetch(`/api/klines?symbol=${t.symbol}&interval=1d&limit=40`);
           if (!kr.ok) { setProgress(i + 1); continue; }
           const klines: Kline[] = await kr.json();
@@ -72,14 +72,20 @@ export default function SignalsDashboard() {
           const rsi = calcRSI(closes);
           const volRatio = calcVolumeRatio(volumes);
           const macd = calcMACD(closes);
-          const signal = getSignal(rsi, volRatio, macd);
+          const bb = calcBollingerBands(closes);
+          const signal = getSignal(rsi, volRatio, macd, bb);
           const score = signalScore(signal);
 
           const open = parseFloat(t.openPrice);
           const last = parseFloat(t.lastPrice);
           const pct24h = open > 0 ? ((last - open) / open) * 100 : 0;
 
-          results.push({ symbol: t.symbol, baseAsset: t.baseAsset, lastPrice: last, pct24h, rsi: Math.round(rsi * 10) / 10, volRatio: Math.round(volRatio * 100) / 100, macd, signal, score });
+          results.push({
+            symbol: t.symbol, baseAsset: t.baseAsset, lastPrice: last, pct24h,
+            rsi: Math.round(rsi * 10) / 10,
+            volRatio: Math.round(volRatio * 100) / 100,
+            macd, bb, signal, score,
+          });
           results.sort((a, b) => b.score - a.score || b.volRatio - a.volRatio);
           setRows([...results]);
         } catch { /* skip */ }
@@ -119,22 +125,22 @@ export default function SignalsDashboard() {
           <div className="w-full bg-slate-100 rounded-full h-2">
             <div className="bg-blue-500 h-2 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
           </div>
-          <p className="text-xs text-slate-400 mt-2">Fetching 40-day klines · Computing RSI(14) + MACD(12,26,9) + Volume ratio · ~30s</p>
+          <p className="text-xs text-slate-400 mt-2">Fetching 40-day klines · RSI(14) + MACD(12,26,9) + BB(20,2) + Volume ratio · ~30s</p>
         </div>
       )}
 
-      {/* Legend — always visible */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Legend cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
           <div className="text-slate-500 text-xs font-medium mb-3 uppercase tracking-wide">MACD Legend</div>
           <div className="space-y-2 text-xs">
             {[
-              { icon: "⬆", label: "Cross (Bullish)", desc: "MACD just crossed above signal line — momentum turning bullish right now", color: "text-emerald-600" },
-              { icon: "▲", label: "Bull",            desc: "MACD above signal line — ongoing uptrend",                                  color: "text-green-600"   },
-              { icon: "▼", label: "Bear",            desc: "MACD below signal line — ongoing downtrend",                                color: "text-slate-500"   },
-              { icon: "⬇", label: "Cross (Bearish)", desc: "MACD just crossed below signal line — sell signal",                        color: "text-red-500"     },
+              { icon: "⬆", label: "Cross (Bullish)", desc: "MACD just crossed above signal — momentum turning bullish", color: "text-emerald-600" },
+              { icon: "▲", label: "Bull",            desc: "MACD above signal line — ongoing uptrend",                  color: "text-green-600"   },
+              { icon: "▼", label: "Bear",            desc: "MACD below signal line — ongoing downtrend",                color: "text-slate-500"   },
+              { icon: "⬇", label: "Cross (Bearish)", desc: "MACD just crossed below signal — sell signal",              color: "text-red-500"     },
             ].map(({ icon, label, desc, color }) => (
-              <div key={label} className="flex gap-3 items-start">
+              <div key={label} className="flex gap-2 items-start">
                 <span className={`font-bold w-4 shrink-0 ${color}`}>{icon}</span>
                 <div>
                   <span className={`font-medium ${color}`}>{label}</span>
@@ -144,17 +150,18 @@ export default function SignalsDashboard() {
             ))}
           </div>
         </div>
+
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
           <div className="text-slate-500 text-xs font-medium mb-3 uppercase tracking-wide">RSI Legend</div>
           <div className="space-y-2 text-xs">
             {[
-              { range: "< 30",  label: "Oversold",   desc: "Strong buy zone — price may bounce",      color: "text-emerald-600" },
-              { range: "30–45", label: "Low",         desc: "Watch for buy signals with confirmation", color: "text-green-600"   },
-              { range: "45–60", label: "Neutral",     desc: "No clear directional edge",               color: "text-slate-500"   },
-              { range: "60–70", label: "High",        desc: "Momentum strong, watch for reversal",     color: "text-amber-600"   },
-              { range: "> 70",  label: "Overbought",  desc: "Sell zone — price may pull back",         color: "text-red-500"     },
+              { range: "< 30",  label: "Oversold",  desc: "Strong buy zone — price may bounce",      color: "text-emerald-600" },
+              { range: "30–40", label: "Low",        desc: "Approaching oversold, watch for entry",   color: "text-green-600"   },
+              { range: "40–60", label: "Neutral",    desc: "No clear directional edge",               color: "text-slate-500"   },
+              { range: "60–70", label: "High",       desc: "Momentum strong, watch for reversal",     color: "text-amber-600"   },
+              { range: "> 70",  label: "Overbought", desc: "Sell zone — price may pull back",         color: "text-red-500"     },
             ].map(({ range, label, desc, color }) => (
-              <div key={range} className="flex gap-3 items-start">
+              <div key={range} className="flex gap-2 items-start">
                 <span className={`font-mono font-medium w-12 shrink-0 ${color}`}>{range}</span>
                 <div>
                   <span className={`font-medium ${color}`}>{label}</span>
@@ -164,16 +171,41 @@ export default function SignalsDashboard() {
             ))}
           </div>
         </div>
+
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+          <div className="text-slate-500 text-xs font-medium mb-3 uppercase tracking-wide">BB(20,2) Legend</div>
+          <div className="space-y-2 text-xs">
+            {[
+              { range: "< 0",    label: "Below Band", desc: "Price broke below lower band — extreme oversold", color: "text-emerald-600" },
+              { range: "0–0.2",  label: "Lower Zone", desc: "Near lower band — statistically cheap",           color: "text-green-600"   },
+              { range: "0.2–0.8",label: "Mid Band",   desc: "Price within normal range",                       color: "text-slate-500"   },
+              { range: "0.8–1",  label: "Upper Zone", desc: "Near upper band — statistically expensive",       color: "text-amber-600"   },
+              { range: "> 1",    label: "Above Band", desc: "Price broke above upper band — extreme overbought",color: "text-red-500"    },
+            ].map(({ range, label, desc, color }) => (
+              <div key={range} className="flex gap-2 items-start">
+                <span className={`font-mono font-medium w-14 shrink-0 ${color}`}>{range}</span>
+                <div>
+                  <span className={`font-medium ${color}`}>{label}</span>
+                  <span className="text-slate-400"> — {desc}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 pt-3 border-t border-slate-100 text-xs flex gap-2 items-center">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-violet-50 border border-violet-200 text-violet-700 font-medium text-[10px]">⊙ Squeeze</span>
+            <span className="text-slate-400">Bands narrowing — big move incoming</span>
+          </div>
+        </div>
       </div>
 
       {rows.length > 0 && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "Strong Buy", sig: "strong_buy", color: "emerald" },
-              { label: "Buy",        sig: "buy",        color: "green"   },
-              { label: "Sell",       sig: "sell,strong_sell", color: "red" },
-              { label: "Neutral",    sig: "neutral",    color: "slate"   },
+              { label: "Strong Buy", sig: "strong_buy",       color: "emerald" },
+              { label: "Buy",        sig: "buy",              color: "green"   },
+              { label: "Sell",       sig: "sell,strong_sell", color: "red"     },
+              { label: "Neutral",    sig: "neutral",          color: "slate"   },
             ].map(({ label, sig, color }) => {
               const count = rows.filter(r => sig.split(",").includes(r.signal)).length;
               return (
@@ -186,7 +218,7 @@ export default function SignalsDashboard() {
           </div>
 
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
-            ⚠️ RSI(14) + MACD(12,26,9) + Volume ratio are technical indicators only — not financial advice. Always do your own research.
+            ⚠️ RSI(14) + MACD(12,26,9) + BB(20,2) + Volume ratio are technical indicators only — not financial advice. Always do your own research.
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
@@ -212,6 +244,7 @@ export default function SignalsDashboard() {
                   <th className="text-left py-2 px-3 font-medium">Signal</th>
                   <th className="text-right py-2 px-3 font-medium">RSI(14)</th>
                   <th className="text-center py-2 px-3 font-medium">MACD</th>
+                  <th className="text-center py-2 px-3 font-medium">BB %B</th>
                   <th className="text-right py-2 px-3 font-medium">Vol Ratio</th>
                   <th className="text-right py-2 px-3 font-medium">Price</th>
                   <th className="text-right py-2 pl-3 font-medium">24h</th>
@@ -221,6 +254,7 @@ export default function SignalsDashboard() {
                 {filtered.map((r, i) => {
                   const meta = SIGNAL_META[r.signal];
                   const pos = r.pct24h >= 0;
+
                   const macdColor = r.macd?.crossover === "bullish" ? "text-emerald-600"
                     : r.macd?.crossover === "bearish" ? "text-red-500"
                     : r.macd && r.macd.histogram > 0 ? "text-green-600"
@@ -230,6 +264,15 @@ export default function SignalsDashboard() {
                     : r.macd && r.macd.histogram > 0 ? "▲ Bull"
                     : r.macd && r.macd.histogram < 0 ? "▼ Bear"
                     : "—";
+
+                  const pbPct = r.bb ? Math.round(r.bb.percentB * 100) : null;
+                  const bbColor = r.bb
+                    ? r.bb.percentB < 0   ? "text-emerald-600"
+                    : r.bb.percentB < 0.2 ? "text-green-600"
+                    : r.bb.percentB > 1   ? "text-red-500"
+                    : r.bb.percentB > 0.8 ? "text-amber-600"
+                    : "text-slate-500"
+                    : "text-slate-400";
 
                   return (
                     <tr key={r.symbol} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -252,7 +295,7 @@ export default function SignalsDashboard() {
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <div className="w-16 bg-slate-100 rounded-full h-1.5">
+                          <div className="w-14 bg-slate-100 rounded-full h-1.5">
                             <div className={`h-1.5 rounded-full ${r.rsi < 30 ? "bg-emerald-500" : r.rsi > 70 ? "bg-red-500" : "bg-blue-500"}`}
                               style={{ width: `${Math.min(r.rsi, 100)}%` }} />
                           </div>
@@ -267,6 +310,14 @@ export default function SignalsDashboard() {
                           <div className="text-[10px] text-slate-400 font-mono">
                             {r.macd.histogram > 0 ? "+" : ""}{r.macd.histogram.toFixed(4)}
                           </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <div className={`font-mono text-sm font-medium ${bbColor}`}>
+                          {pbPct !== null ? `${pbPct}%` : "—"}
+                        </div>
+                        {r.bb?.squeeze && (
+                          <div className="text-[10px] text-violet-600 font-medium">⊙ Squeeze</div>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right">
