@@ -103,7 +103,7 @@ export function getSignal(
   if (rsi < 35 && volRatio >= 1.2) return "buy";
   if (rsi < 40 && macd?.crossover === "bullish" && volRatio >= 1.1) return "buy";
   // Watch buy: either signal weakly present
-  if (rsi < 45 || (macd?.crossover === "bullish" && rsi < 55)) return "watch_buy";
+  if (rsi < 40 || (macd?.crossover === "bullish" && rsi < 55)) return "watch_buy";
 
   // Strong sell: overbought RSI + volume + MACD confirming
   if (rsi > 75 && volRatio >= 1.5 && macdBear) return "strong_sell";
